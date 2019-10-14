@@ -21,5 +21,16 @@ func main() {
 	logrus.Infoln("NewMQ success")
 	defer mq.Close()
 
-	mq.Subscribe()
+	forever := make(chan bool)
+
+	mq.Subscribe("logs", "", ProcessMessage, nil)
+
+	logrus.Printf(" [*] Waiting for logs. To exit press CTRL+C")
+	<-forever
+}
+
+// ProcessMessage ...
+func ProcessMessage(msg message.Message, ctx interface{}) {
+	logrus.Infoln(msg)
+	logrus.Infoln(ctx)
 }

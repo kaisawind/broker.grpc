@@ -37,7 +37,7 @@ loop:
 			}
 			msg.SetExchange("logs").
 				SetContentType(message.JSONContentType).
-				SetType("mqtt.publish")
+				SetPackageType("mqtt.publish")
 			mq.Publish(msg)
 			goto loop
 		}

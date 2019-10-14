@@ -5,7 +5,7 @@ import "fmt"
 // MQ MessageQueue消息队列
 type MQ interface {
 	Publish(msg Message) error
-	Subscribe() error
+	Subscribe(exchange string, queue string, handler HandlerFunc, ctx interface{}) error
 	Close() error
 }
 

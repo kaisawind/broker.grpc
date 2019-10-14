@@ -10,10 +10,19 @@ import (
 
 // RabbitMQ RabbitMQ结构体
 type RabbitMQ struct {
-	config      *Config // 配置信息
-	conn        *amqp.Connection
-	ch          *amqp.Channel
-	consumerTag string
+	config   *Config // 配置信息
+	conn     *amqp.Connection
+	ch       *amqp.Channel
+	consumer *rabbitConsumer
+	factory  Factory // 消息创建工厂函数
+}
+
+// rabbitConsumer 订阅者数据
+type rabbitConsumer struct {
+	Exchange string      // 路由名
+	Queue    string      // 队列名
+	Handler  HandlerFunc // 消息处理函数
+	Context  interface{} // Context
 }
 
 // NewRabbitMQ ...
@@ -78,6 +87,15 @@ func (mq *RabbitMQ) Reconnect() error {
 		// reconnect 断线重连(自愈)
 		rabbitmq.Reconnect()
 	}()
+
+	// 重新订阅数据
+	if mq.consumer != nil {
+		err = mq.Subscribe(mq.consumer.Exchange, mq.consumer.Queue, mq.consumer.Handler, mq.consumer.Context)
+		if err != nil {
+			logrus.WithError(err).Errorln("resubscribe error")
+		}
+		logrus.Infoln("resubscribe success")
+	}
 	return nil
 }
 
@@ -89,7 +107,7 @@ func (mq *RabbitMQ) Close() error {
 	}
 
 	// will close() the deliveries channel
-	err := mq.ch.Cancel(mq.consumerTag, true)
+	err := mq.ch.Close()
 	if err != nil {
 		logrus.WithError(err).Errorln("channel closed failed")
 		return err
@@ -103,12 +121,17 @@ func (mq *RabbitMQ) Close() error {
 	return nil
 }
 
+// SetMessageFactory 消息工厂函数
+func (mq *RabbitMQ) SetMessageFactory(factory Factory) {
+	mq.factory = factory
+}
+
 // Publish 发送数据
 func (mq *RabbitMQ) Publish(msg Message) error {
 
 	exchange := msg.Exchange()
 	contentType := msg.ContentType()
-	packetType := msg.Type()
+	messageType := msg.MessageType()
 
 	body, err := msg.Serialize()
 	if err != nil {
@@ -138,16 +161,19 @@ func (mq *RabbitMQ) Publish(msg Message) error {
 		amqp.Publishing{
 			ContentType: contentType,
 			Timestamp:   time.Now(),
-			Type:        packetType,
+			Type:        messageType,
 			Body:        body,
 		})
 	return err
 }
 
 // Subscribe 订阅数据
-func (mq *RabbitMQ) Subscribe() error {
+// exchange: exchange名，将从exchange获取数据
+// queue: 队列名，当为""时，会是随机队列名(amq.gen-_JNtxpzXTx1Ic5AC0c-TvA)
+// ctx: context
+func (mq *RabbitMQ) Subscribe(exchange string, queue string, handler HandlerFunc, ctx interface{}) error {
 	err := mq.ch.ExchangeDeclare(
-		"logs",   // name
+		exchange, // name
 		"fanout", // type
 		true,     // durable
 		false,    // auto-deleted
@@ -156,12 +182,12 @@ func (mq *RabbitMQ) Subscribe() error {
 		nil,      // arguments
 	)
 	if err != nil {
-		logrus.Errorln(err, "Failed to declare an exchange")
+		logrus.Errorln(err, "Failed to declare an exchange", exchange)
 		return err
 	}
 
 	q, err := mq.ch.QueueDeclare(
-		"",    // name
+		queue, // name
 		false, // durable
 		true,  // delete when usused
 		false, // exclusive
@@ -174,9 +200,9 @@ func (mq *RabbitMQ) Subscribe() error {
 	}
 
 	err = mq.ch.QueueBind(
-		q.Name, // queue name
-		"",     // routing key
-		"logs", // exchange
+		q.Name,   // queue name
+		"",       // routing key is ignore when use fanout
+		exchange, // exchange
 		false,
 		nil,
 	)
@@ -199,15 +225,33 @@ func (mq *RabbitMQ) Subscribe() error {
 		return err
 	}
 
-	forever := make(chan bool)
-
 	go func() {
+		defer logrus.Infoln("go function exited")
 		for d := range msgs {
-			logrus.Infoln(" [x] ", d.Timestamp)
+			if mq.factory == nil {
+				logrus.Infoln("factory is nil, set factory to default")
+				mq.factory = &DefaultFactory{}
+			}
+			m := mq.factory.Create(d.Type)
+			err := m.Deserialize(d.Body, d.ContentType)
+			if err != nil {
+				logrus.WithError(err).Errorln("Deserialize", d.Exchange, d.ConsumerTag, d.Type)
+			} else {
+				if handler != nil {
+					handler(m, ctx)
+				} else {
+					logrus.Warningln("message handler is nil")
+				}
+			}
 		}
 	}()
 
-	logrus.Printf(" [*] Waiting for logs. To exit press CTRL+C")
-	<-forever
+	mq.consumer = &rabbitConsumer{
+		Exchange: exchange,
+		Queue:    queue,
+		Handler:  handler,
+		Context:  ctx,
+	}
+	logrus.Infoln("Subscribe success", exchange, queue)
 	return nil
 }
