@@ -2,6 +2,7 @@ package message
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
@@ -105,16 +106,18 @@ func (mq *RabbitMQ) Close() error {
 // Publish 发送数据
 func (mq *RabbitMQ) Publish(msg Message) error {
 
-	topic := msg.Topic()
+	exchange := msg.Exchange()
+	contentType := msg.ContentType()
+	packetType := msg.Type()
 
-	body, err := msg.Serialize(JSONOption)
+	body, err := msg.Serialize()
 	if err != nil {
-		logrus.WithError(err).Errorf("serialize message '%s' failed", topic)
+		logrus.WithError(err).Errorf("serialize message '%s' failed", exchange)
 		return err
 	}
 
 	err = mq.ch.ExchangeDeclare(
-		topic,    // name
+		exchange, // name
 		"fanout", // type
 		true,     // durable
 		false,    // auto-deleted
@@ -128,12 +131,14 @@ func (mq *RabbitMQ) Publish(msg Message) error {
 	}
 
 	err = mq.ch.Publish(
-		topic, // exchange
-		"",    // routing key
-		false, // mandatory
-		false, // immediate
+		exchange, // exchange
+		"",       // routing key
+		false,    // mandatory
+		false,    // immediate
 		amqp.Publishing{
-			ContentType: JSONOption.Format,
+			ContentType: contentType,
+			Timestamp:   time.Now(),
+			Type:        packetType,
 			Body:        body,
 		})
 	return err
@@ -198,7 +203,7 @@ func (mq *RabbitMQ) Subscribe() error {
 
 	go func() {
 		for d := range msgs {
-			logrus.Infoln(" [x] ", d)
+			logrus.Infoln(" [x] ", d.Timestamp)
 		}
 	}()
 

@@ -23,16 +23,22 @@ func main() {
 	logrus.Infoln("NewMQ success")
 	defer mq.Close()
 
-	forever := make(chan bool)
 	var after <-chan time.Time
 loop:
-	after = time.After(3 * time.Second)
+	after = time.After(3 * time.Millisecond)
 	for {
 		logrus.Infoln("每3s执行一次")
 		select {
-		case <-forever:
 		case <-after:
-			mq.Publish()
+			timenow := time.Now().String()
+			msg := &message.MqttBroker{
+				Topic:   "/bkvvg3eegkqnbutdv2q0/test01/Clients",
+				Payload: []byte(timenow),
+			}
+			msg.SetExchange("logs").
+				SetContentType(message.JSONContentType).
+				SetType("mqtt.publish")
+			mq.Publish(msg)
 			goto loop
 		}
 	}

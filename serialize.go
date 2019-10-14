@@ -2,36 +2,36 @@ package message
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 )
 
 // 预定义序列化参数
 var (
-	JSONOption = SerializeOption{Format: "application/json"}
-	XMLOption  = SerializeOption{Format: "application/xml"}
-	TextOption = SerializeOption{Format: "text/plain"}
+	JSONContentType = "application/json"
+	XMLContentTypen = "application/xml"
+	HexContentType  = "application/octet-stream"
 )
 
-// SerializeOption 序列化参数
-type SerializeOption struct {
-	Format string
-}
-
 // Serialize 序列化
-func Serialize(msg Message, opt SerializeOption) ([]byte, error) {
-	switch opt {
-	case JSONOption:
+func Serialize(msg Message, contentType string) ([]byte, error) {
+	switch contentType {
+	case JSONContentType:
 		return json.Marshal(msg)
+	case XMLContentTypen:
+		return xml.Marshal(msg)
 	default:
 		return nil, errors.New("invalid message codec")
 	}
 }
 
 // Deserialize 反序列化
-func Deserialize(buf []byte, opt SerializeOption, obj interface{}) error {
-	switch opt {
-	case JSONOption:
+func Deserialize(buf []byte, contentType string, obj interface{}) error {
+	switch contentType {
+	case JSONContentType:
 		return json.Unmarshal(buf, obj)
+	case XMLContentTypen:
+		return xml.Unmarshal(buf, obj)
 	default:
 		return errors.New("invalid message codec")
 	}
