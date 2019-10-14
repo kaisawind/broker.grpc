@@ -6,6 +6,7 @@ import "fmt"
 type MQ interface {
 	Publish(msg Message) error
 	Subscribe(exchange string, queue string, handler HandlerFunc, ctx interface{}) error
+	SetMessageFactory(factory Factory)
 	Close() error
 }
 
