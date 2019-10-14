@@ -2,7 +2,6 @@ package message
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
@@ -18,7 +17,7 @@ type RabbitMQ struct {
 
 // NewRabbitMQ ...
 func NewRabbitMQ(c *Config) (MQ, error) {
-	rabbitmq, err := Connect(c)
+	rabbitmq, err := ConnectRabbitMQ(c)
 	if err != nil {
 		logrus.WithError(err).Errorln("create mq connection failed")
 		return nil, err
@@ -33,8 +32,8 @@ func NewRabbitMQ(c *Config) (MQ, error) {
 	return rabbitmq, err
 }
 
-// Connect rabbitmq connect
-func Connect(c *Config) (*RabbitMQ, error) {
+// ConnectRabbitMQ rabbitmq connect
+func ConnectRabbitMQ(c *Config) (*RabbitMQ, error) {
 	url := fmt.Sprintf("amqp://%s:%s@%s/", c.Username, c.Password, c.Hosts)
 	logrus.Infoln("create mq connection, mq server url : ", url)
 
@@ -62,7 +61,7 @@ func Connect(c *Config) (*RabbitMQ, error) {
 
 // Reconnect 重连
 func (mq *RabbitMQ) Reconnect() error {
-	rabbitmq, err := Connect(mq.config)
+	rabbitmq, err := ConnectRabbitMQ(mq.config)
 	if err != nil {
 		logrus.WithError(err).Errorln("reconnect error")
 		return mq.Reconnect()
@@ -104,9 +103,18 @@ func (mq *RabbitMQ) Close() error {
 }
 
 // Publish 发送数据
-func (mq *RabbitMQ) Publish() error {
-	err := mq.ch.ExchangeDeclare(
-		"logs",   // name
+func (mq *RabbitMQ) Publish(msg Message) error {
+
+	topic := msg.Topic()
+
+	body, err := msg.Serialize(JSONOption)
+	if err != nil {
+		logrus.WithError(err).Errorf("serialize message '%s' failed", topic)
+		return err
+	}
+
+	err = mq.ch.ExchangeDeclare(
+		topic,    // name
 		"fanout", // type
 		true,     // durable
 		false,    // auto-deleted
@@ -116,17 +124,17 @@ func (mq *RabbitMQ) Publish() error {
 	)
 	if err != nil {
 		logrus.Errorln(err, "Failed to declare an exchange")
+		return err
 	}
 
-	body := time.Now().String()
 	err = mq.ch.Publish(
-		"logs", // exchange
-		"",     // routing key
-		false,  // mandatory
-		false,  // immediate
+		topic, // exchange
+		"",    // routing key
+		false, // mandatory
+		false, // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(body),
+			ContentType: JSONOption.Format,
+			Body:        body,
 		})
 	return err
 }
@@ -190,7 +198,7 @@ func (mq *RabbitMQ) Subscribe() error {
 
 	go func() {
 		for d := range msgs {
-			logrus.Printf(" [x] %s", d.Body)
+			logrus.Infoln(" [x] ", d)
 		}
 	}()
 
