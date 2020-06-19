@@ -13,3 +13,6 @@
 
 #Goland
 .idea/
+
+# binary out
+bin/
