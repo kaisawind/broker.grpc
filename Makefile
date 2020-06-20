@@ -1,13 +1,15 @@
 .PHONY: grpc build test
 
-grpc:
-	protoc -I ./pb/. --go_out=plugins=grpc,paths=source_relative:./pb ./pb/broker.proto
+all: build
 
 build: test
 	$(GO) build $(FLAGS)message .
 
 test:
 	$(CGO) test -v ./...
+
+grpc:
+	protoc -I ./pb/. --go_out=plugins=grpc,paths=source_relative:./pb ./pb/broker.proto
 
 ##### ^^^^^^ EDIT ABOVE ^^^^^^ #####
 
