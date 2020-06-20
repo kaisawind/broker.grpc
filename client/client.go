@@ -1,10 +1,11 @@
 package client
 
 import (
+	"net"
+
 	pb "github.com/kaisawind/message/pb"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"net"
 )
 
 // GRPCClient is a client interface for grpc service.
@@ -41,14 +42,17 @@ func NewGRPCClient(host, port string) (GRPCClient, error) {
 	}, nil
 }
 
+// Host grpc host
 func (c *grpcClient) Host() string {
 	return c.host
 }
 
+// Port grpc server port
 func (c *grpcClient) Port() string {
 	return c.port
 }
 
+// Close close connection with grpc server
 func (c *grpcClient) Close() error {
 	if c.conn != nil {
 		logrus.Debugln("client: ", c.conn.GetState(), "->closed")
@@ -57,6 +61,7 @@ func (c *grpcClient) Close() error {
 	return nil
 }
 
+// Message message handler
 func (c *grpcClient) Message() pb.MessageClient {
 	return c.message
 }

@@ -16,7 +16,7 @@ type Server struct {
 	grpcServer *grpc.Server
 	pubChan    chan *pb.PubReq
 	once       sync.Once
-	quit       chan bool
+	quit       chan struct{}
 
 	GRPCHost string `long:"grpc-host" description:"the IP to listen on for grpc" default:"0.0.0.0" env:"GRPC_HOST"`
 	GRPCPort string `long:"grpc-port" description:"the port to listen on for grpc's insecure connections" default:"6653" env:"GRPC_PORT"`
@@ -25,18 +25,23 @@ type Server struct {
 // NewServer ...
 func NewServer() *Server {
 	server := &Server{
-		pubChan: make(chan *pb.PubReq, 100),
-		quit:    make(chan bool),
+		pubChan: make(chan *pb.PubReq),
+		quit:    make(chan struct{}),
 	}
+	go server.run()
 	return server
 }
 
 // Close clean all data if need
 func (s *Server) Close() (err error) {
 	s.once.Do(func() {
-		s.quit <- true
+		close(s.quit)
 		close(s.pubChan)
 	})
+	if s.grpcServer != nil {
+		s.grpcServer.GracefulStop()
+		logrus.Infoln("grpc graceful stop")
+	}
 	return
 }
 

@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+
+	"github.com/golang/protobuf/ptypes/empty"
 	pb "github.com/kaisawind/message/pb"
 	"github.com/sirupsen/logrus"
 )
@@ -11,27 +13,12 @@ func (s *Server) Publish(_ context.Context, req *pb.PubReq) (resp *pb.PubResp, e
 	select {
 	case <-s.quit:
 	case s.pubChan <- req:
+		logrus.Infoln("Publish PubReq", req)
 	default:
-		logrus.Warningln("lose pub req", req)
+		logrus.Warningln("Lose PubReq", req)
+		return &pb.PubResp{Status: 1}, nil
 	}
-	return
-}
-
-// Run create go func to monitor pubChan
-func (s *Server) Run() {
-Loop:
-	for {
-		select {
-		case <-s.quit:
-			logrus.Warningln("pub chan closed")
-			break Loop
-		case pubReq, ok := <-s.pubChan:
-			if !ok {
-				break Loop
-			}
-			logrus.Infoln("receive pub req", pubReq)
-		}
-	}
+	return &pb.PubResp{Status: 0}, nil
 }
 
 // Subscribe subscribe topic or topics
@@ -46,7 +33,7 @@ Loop:
 			if !ok {
 				break Loop
 			}
-
+			logrus.Infoln("Subscribe PubReq", pubReq)
 			switch val := req.Oneof.(type) {
 			case *pb.SubReq_Topic:
 				if val.Topic != pubReq.Topic {
@@ -65,6 +52,8 @@ Loop:
 				if !has {
 					continue
 				}
+			default:
+				continue
 			}
 			err = stream.Send(pubReq)
 			if err != nil {
@@ -74,4 +63,26 @@ Loop:
 		}
 	}
 	return
+}
+
+// Ping test grpc server health
+func (s *Server) Ping(context.Context, *empty.Empty) (*empty.Empty, error) {
+	return &empty.Empty{}, nil
+}
+
+// run create go func to monitor pubChan
+func (s *Server) run() {
+Loop:
+	for {
+		select {
+		case <-s.quit:
+			logrus.Warningln("pub chan closed")
+			break Loop
+		case pubReq, ok := <-s.pubChan:
+			if !ok {
+				break Loop
+			}
+			logrus.Infoln("Receive PubReq", pubReq)
+		}
+	}
 }
