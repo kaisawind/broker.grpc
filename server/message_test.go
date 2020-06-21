@@ -120,18 +120,12 @@ func TestServer_Subscribe(t *testing.T) {
 		}
 	}()
 	subReq := &pb.SubReq{}
-	stream, err := c.Message().Subscribe(context.TODO(), subReq)
+	_, err = c.Message().Subscribe(context.TODO(), subReq)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
-	time.Sleep(1 * time.Millisecond)
-	err = stream.CloseSend()
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestServer_Subscribe2(t *testing.T) {
@@ -158,7 +152,6 @@ func TestServer_Subscribe2(t *testing.T) {
 	}
 	defer c.Close()
 	go func() {
-		time.Sleep(100 * time.Millisecond)
 		for i := int32(0); i < 10; i++ {
 			val1 := &pb.PubResp{Status: i}
 			req, err := ptypes.MarshalAny(val1)
@@ -184,13 +177,17 @@ func TestServer_Subscribe2(t *testing.T) {
 		}
 	}()
 
-	subReq := &pb.SubReq{}
+	topic := &pb.SubReq_Topic{
+		Topic: "topic",
+	}
+	subReq := &pb.SubReq{
+		Oneof: topic,
+	}
 	stream, err := c.Message().Subscribe(context.TODO(), subReq)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
-	i := 0
 	for {
 		pubReq, err := stream.Recv()
 		if err != nil {
@@ -200,15 +197,14 @@ func TestServer_Subscribe2(t *testing.T) {
 			t.Error(err)
 			t.FailNow()
 		}
-		t.Log("stream recv", i, pubReq)
+		t.Log("stream recv", pubReq)
 		val1 := &pb.PubResp{}
 		err = ptypes.UnmarshalAny(pubReq.Req, val1)
 		if err != nil {
 			t.Error(err)
 			t.FailNow()
 		}
-		i++
-		if i == 10 {
+		if val1.Status == 9 {
 			break
 		}
 	}
