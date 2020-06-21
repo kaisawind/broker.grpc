@@ -11,6 +11,13 @@ test:
 grpc:
 	protoc -I ./pb/. --go_out=plugins=grpc,paths=source_relative:./pb ./pb/broker.proto
 
+docker:
+	docker buildx build \
+		--platform=linux/arm64,linux/amd64 \
+		-f scripts/Dockerfile \
+		-t kaisawind/broker.grpc . \
+		--push
+
 ##### ^^^^^^ EDIT ABOVE ^^^^^^ #####
 
 ##### =====> Internals <===== #####
