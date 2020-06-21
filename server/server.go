@@ -13,10 +13,10 @@ import (
 // Server server
 type Server struct {
 	pb.UnimplementedMessageServer
-	grpcServer *grpc.Server
-	pubChan    chan *pb.PubReq
-	once       sync.Once
-	quit       chan struct{}
+	grpcServer  *grpc.Server
+	subscribers sync.Map // map[xid]chan *pb.PubReq
+	once        sync.Once
+	quit        chan struct{}
 
 	GRPCHost string `long:"grpc-host" description:"the IP to listen on for grpc" default:"0.0.0.0" env:"GRPC_HOST"`
 	GRPCPort string `long:"grpc-port" description:"the port to listen on for grpc's insecure connections" default:"6653" env:"GRPC_PORT"`
@@ -25,10 +25,8 @@ type Server struct {
 // NewServer ...
 func NewServer() *Server {
 	server := &Server{
-		pubChan: make(chan *pb.PubReq),
-		quit:    make(chan struct{}),
+		quit: make(chan struct{}),
 	}
-	go server.run()
 	return server
 }
 
@@ -36,7 +34,6 @@ func NewServer() *Server {
 func (s *Server) Close() (err error) {
 	s.once.Do(func() {
 		close(s.quit)
-		close(s.pubChan)
 	})
 	if s.grpcServer != nil {
 		s.grpcServer.GracefulStop()
