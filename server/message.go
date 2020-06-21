@@ -10,9 +10,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Subscribers 订阅者
-type Subscribers map[context.Context]pb.Message_SubscribeServer
-
 // Publish publish topic message
 func (s *Server) Publish(_ context.Context, req *pb.PubReq) (resp *pb.PubResp, err error) {
 	s.subscribers.Range(func(key, value interface{}) bool {
