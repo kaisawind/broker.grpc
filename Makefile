@@ -3,7 +3,7 @@
 all: build
 
 build: test
-	$(GO) build $(FLAGS)message .
+	$(GO) build $(FLAGS)broker .
 
 test:
 	$(CGO) test -v ./...

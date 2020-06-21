@@ -5,7 +5,7 @@ import (
 	"os"
 
 	flags "github.com/jessevdk/go-flags"
-	"github.com/kaisawind/message/server"
+	"github.com/kaisawind/broker.grpc/server"
 	"github.com/sirupsen/logrus"
 )
 

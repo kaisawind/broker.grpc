@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kaisawind/message/server"
+	"github.com/kaisawind/broker.grpc/server"
 )
 
 func TestNewServer(t *testing.T) {

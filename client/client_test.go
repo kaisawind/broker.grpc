@@ -9,9 +9,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
-
-	"github.com/kaisawind/message/client"
-	"github.com/kaisawind/message/server"
+	"github.com/kaisawind/broker.grpc/client"
+	"github.com/kaisawind/broker.grpc/server"
 )
 
 func tryHostAndPort() (host, port string, err error) {
@@ -20,7 +19,7 @@ func tryHostAndPort() (host, port string, err error) {
 	if err != nil {
 		return tryHostAndPort()
 	}
-	listener.Close()
+	err = listener.Close()
 	return
 }
 

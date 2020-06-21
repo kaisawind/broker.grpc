@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	pb "github.com/kaisawind/message/pb"
+	pb "github.com/kaisawind/broker.grpc/pb"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )

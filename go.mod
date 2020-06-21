@@ -1,4 +1,4 @@
-module github.com/kaisawind/message
+module github.com/kaisawind/broker.grpc
 
 go 1.14
 

@@ -4,7 +4,7 @@ import (
 	"net"
 	"sync"
 
-	pb "github.com/kaisawind/message/pb"
+	pb "github.com/kaisawind/broker.grpc/pb"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -49,7 +49,10 @@ func (s *Server) Serve() (err error) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.grpcServe()
+		err = s.grpcServe()
+		if err != nil {
+			logrus.WithError(err).Errorln("grpc serve error")
+		}
 	}()
 	wg.Wait()
 

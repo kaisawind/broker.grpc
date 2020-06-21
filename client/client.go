@@ -3,7 +3,7 @@ package client
 import (
 	"net"
 
-	pb "github.com/kaisawind/message/pb"
+	pb "github.com/kaisawind/broker.grpc/pb"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
