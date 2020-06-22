@@ -2,11 +2,11 @@
 
 all: build
 
-build: test
+build:
 	$(GO) build $(FLAGS)broker .
 
 test:
-	$(CGO) test -v ./...
+	$(GO) test -v ./...
 
 grpc:
 	protoc -I ./pb/. --go_out=plugins=grpc,paths=source_relative:./pb ./pb/broker.proto

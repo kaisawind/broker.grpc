@@ -1,6 +1,6 @@
-FROM golang:1.13-alpine AS go-builder
+FROM golang:alpine3.11 AS go-builder
 ENV GO111MODULE=on
-WORKDIR /go
+WORKDIR /go/src/github.com/kaisawind/broker.grpc
 
 RUN sed -e 's/dl-cdn[.]alpinelinux.org/mirrors.aliyun.com/g' -i~ /etc/apk/repositories
 
